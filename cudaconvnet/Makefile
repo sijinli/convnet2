@@ -69,8 +69,9 @@ OBJDIR := ./obj/$(DBG)
 ########## USER STUFF ###########
 PYTHON_VERSION=$(shell python -V 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1,2)
 MODELNAME := _ConvNet
-LDFLAGS   += -lpthread -ljpeg -lpython$(PYTHON_VERSION) -L../util -lutilpy -L../nvmatrix -lnvmatrix -L../cudaconv3 -lcudaconv -lcublas -Wl,-rpath=./util -Wl,-rpath=./nvmatrix -Wl,-rpath=./cudaconv3 
-INCLUDES      := -I$(CUDA_INC_PATH) -I $(CUDA_SDK_PATH)/common/inc -I./include -I$(PYTHON_INCLUDE_PATH) -I$(NUMPY_INCLUDE_PATH) 
+LINK_EXTRA_LIBS:=-L$(LIBJPEG_BASE)/lib
+LDFLAGS   += -lpthread  -ljpeg -lpython$(PYTHON_VERSION) -L../util -lutilpy -L../nvmatrix -lnvmatrix -L../cudaconv3 -lcudaconv -lcublas -Wl,-rpath=./util -Wl,-rpath=./nvmatrix -Wl,-rpath=./cudaconv3 
+INCLUDES      := -I$(CUDA_INC_PATH) -I $(CUDA_SDK_PATH)/common/inc -I./include -I$(PYTHON_INCLUDE_PATH) -I$(NUMPY_INCLUDE_PATH) -I$(LIBJPEG_BASE)/include
 
 DEFINES := -DNUMPY_INTERFACE
 
@@ -101,7 +102,7 @@ $(OBJDIR)/%.cpp.o : %.cpp $(C_DEPS)
 	$(GCC) $(DEFINES) $(CCFLAGS) $(INCLUDES) -o $@ -c $<
 
 $(TARGET): $(OBJS)
-	$(GCC) $(CCFLAGS) -o $@ $+ $(LDFLAGS) $(EXTRA_LDFLAGS)
+	$(GCC) $(CCFLAGS) -o $@ $+ $(LDFLAGS) $(EXTRA_LDFLAGS) $(LINK_EXTRA_LIBS)
 	ln -sf $(TARGET) .
 
 makedirs:
