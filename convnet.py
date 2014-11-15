@@ -26,7 +26,9 @@ from convdata import ImageDataProvider, CIFARDataProvider, DummyConvNetLogRegDat
 from os import linesep as NL
 import copy as cp
 import os
-
+# BEGIN MY modules ---Lisijin
+import iconfig
+# END MY modules
 class Driver(object):
     def __init__(self, convnet):
         self.convnet = convnet
@@ -102,7 +104,7 @@ class ConvNet(IGPUModel):
         filename_options = []
         for v in ('color_noise', 'multiview_test', 'inner_size', 'scalar_mean', 'minibatch_size'):
             dp_params[v] = op.get_value(v)
-
+        iconfig.add_dp_params(dp_params, op)
         IGPUModel.__init__(self, "ConvNet", op, load_dic, filename_options, dp_params=dp_params)
         
     def import_model(self):
@@ -276,7 +278,8 @@ class ConvNet(IGPUModel):
         DataProvider.register_data_provider('dummy-lr-n', 'Dummy ConvNet logistic regression', DummyConvNetLogRegDataProvider)
         DataProvider.register_data_provider('image', 'JPEG-encoded image data provider', ImageDataProvider)
         DataProvider.register_data_provider('cifar', 'CIFAR-10 data provider', CIFARDataProvider)
-  
+        iconfig.add_options(op)
+        iconfig.register_data_provider(DataProvider)
         return op
 
 if __name__ == "__main__":

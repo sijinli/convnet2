@@ -29,13 +29,14 @@
 export CUDA_INSTALL_PATH=/usr/local/cuda
 
 # Python include directory. This should contain the file Python.h, among others.
-export PYTHON_INCLUDE_PATH=/usr/include/python2.7
-
+export PYTHON_INCLUDE_PATH=/usr/include/python2.6
+#export PYTHON_INCLUDE_PATH=/usr/local/include/python2.7
+ 
 # Numpy include directory. This should contain the file arrayobject.h, among others.
-export NUMPY_INCLUDE_PATH=/usr/lib/python2.7/dist-packages/numpy/core/include/numpy/
+export NUMPY_INCLUDE_PATH=/usr/lib/python2.6/site-packages/numpy-1.8.0-py2.6-linux-x86_64.egg/numpy/core/include/numpy
 
 # ATLAS library directory. This should contain the file libcblas.so, among others.
-export ATLAS_LIB_PATH=/usr/lib/atlas-base
+export ATLAS_LIB_PATH=/usr/lib64/atlas/
 
 # You don't have to change these:
 export LD_LIBRARY_PATH=$CUDA_INSTALL_PATH/lib64:$LD_LIBRARY_PATH
