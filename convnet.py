@@ -219,6 +219,11 @@ class ConvNet(IGPUModel):
         
     def print_test_status(self):
         pass
+    def get_num_batches_done(self):
+        if self.batch_size > 0:
+            return  (len(self.train_batch_range) * (self.epoch - 1) + self.batchnum - self.train_batch_range[0]) / self.batch_size + 1
+        else:
+            return (len(self.train_batch_range) * (self.epoch - 1) + self.batchnum - self.train_batch_range[0] + 1)
         
     def print_test_results(self):
         print NL + "======================Test output======================"
