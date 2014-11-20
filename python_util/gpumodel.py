@@ -291,9 +291,12 @@ class IGPUModel:
         return self.checkpoint_writer
         
     def get_progress(self):
-        num_batches_total = self.num_epochs * len(self.train_batch_range)
-        return min(1.0, max(0.0, float(self.get_num_batches_done()-1) / num_batches_total))
-    
+        if self.batch_size < 0:
+            num_batches_total = self.num_epochs * len(self.train_batch_range)
+            return min(1.0, max(0.0, float(self.get_num_batches_done()-1) / num_batches_total))
+        else:
+            num_batches_total = self.num_epochs * len(self.train_batch_range)
+            return min(1.0, max(0.0, float(self.get_num_batches_done()-1) * self.batch_size / num_batches_total))
     @staticmethod
     def load_checkpoint(load_dir):
         if os.path.isdir(load_dir):
