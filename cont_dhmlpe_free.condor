@@ -1,0 +1,33 @@
+## exp_name=ASM_act_3_exp_8
+exp_name=ASM_act_12_exp_4
+## exp_name=ASM_act_4_exp_5
+## exp_name=ASM_act_15_exp_9
+## exp_name=ASM_act_14_exp_2
+## exp_name=H80K_All
+## exp_name=JPS_act_14_exp_2_accv
+macid=16
+savedfile=c8k16/ConvNet__2014-11-25_21.54.49
+JT=t006
+EP=400
+## stage=1
+SP_NOTE=_keeptrain
+###########################
+## This file is used for submitting jobs in the first stage
+## JUST TO CONTITUE
+run_mac=c8k$(macid)
+requirements= (Machine=="$(run_mac).cs.cityu.edu.hk")
+
+priority    = 0
+notification= Never
+notify_user = 
+getenv      = True
+
+executable  = /home/grads/sijinli2/pkg/anaconda/bin/python
+universe    = vanilla
+arguments  =  convnet.py --load-file /opt/visal/tmp/for_sijin/Data/saved/$(savedfile) --epoch=$(EP) 
+input      = 
+output    = /opt/visal/tmp/for_sijin/tmp/DHMLPE_log/$(exp_name)_$(run_mac)-$(JT)$(SP_NOTE).output
+error     = /opt/visal/tmp/for_sijin/tmp/DHMLPE_log/$(exp_name)_$(run_mac)-$(JT)$(SP_NOTE).err
+log       = /opt/visal/tmp/for_sijin/tmp/DHMLPE_log/$(exp_name)_$(run_mac)-$(JT)$(SP_NOTE).log
+
+queue 
