@@ -26,6 +26,7 @@ from ibasic_convdata import *
 ##
 import dhmlpe
 import indicatormap
+import dhmlpe_utils as dutils
 ###
 
 class DHMLPEDataProviderError(Exception):
@@ -205,4 +206,85 @@ class CroppedDHMLPERelSkelJointLenDataProvider(CroppedDHMLPERelSkelJointDataProv
         else:
             return self.num_joints - 1
 
+class SPSimpleDataProvider(MemoryFeatureDataProvider):
+    """
+    This data provider will provide
+    [ gt_rel data,
+      img_features,
+      jt_features
+      score]   
+    """
+    def __init__(self, data_dir, feature_range, init_epoch=1, init_batchnum=None, dp_params={}, test=False):
+        MemoryFeatureDataProvider.__init__(self, data_dir, feature_range, init_epoch, init_batchnum, dp_params, test)
+        self.max_depth = self.batch_meta['info']['max_depth']
+        self.num_joints = self.batch_meta['info']['num_joints']
+        self.rbf_sigma = 100
+        if 'rbf_sigma' in dp_params:
+            self.rbf_sigma = dp_params['rbf_sigma']
+            print 'Using rbf_sigma %.6f' % (self.rbf_sigma)
+        self.max_feature_idx = np.max(self.feature_range)
+        self.min_feature_idx = np.min(self.feature_range)
+        self.random_prob = 0.4
+        self.local_step = 30
+    def generate_candidate_index(self, cur_batch_indexes, random_prob):
+        """
+        
+        """
+        ndata = len(cur_batch_indexes)
+        random_indexes = self.feature_range[ np.random.randint(low=0,\
+                                                                 high=len(self.feature_range),
+                                                                 size=ndata)]
+        local_step = np.random.randint(low=-self.local_step,\
+                                       high=self.local_step,size=ndata)
+        l,h = self.min_feature_idx, self.max_feature_idx
+        neighbor_indexes = np.maximum(l, np.minimum(h, cur_batch_indexes+ local_step))
+        switch_index = np.random.rand(ndata) > random_prob
+        mix = random_indexes
+        mix[switch_index] = neighbor_indexes[switch_index]
+        return mix 
+        
+    def get_next_batch(self):
+        if self.data_dic is None or len(self.batch_range) > 1:
+            self.data_dic = self.get_batch(self.curr_batchnum)
+        epoch, batchnum = self.curr_epoch, self.curr_batchnum
+        self.advance_batch()
+        cur_ndata = len(self.data_dic['cur_batch_indexes'])
+        cur_batch_indexes = self.data_dic['cur_batch_indexes']
+        self.data_dic['cur_candidate_indexes']=self.generate_candidate_index(cur_batch_indexes,self.random_prob)
+        cur_candidate_indexes = self.data_dic['cur_candidate_indexes']
+        
+        gt_jt_rel = self.batch_meta['feature_list'][0][..., cur_batch_indexes] 
+        candidate_jt_rel = self.batch_meta['feature_list'][0][..., cur_candidate_indexes]
+        
+        img_feature = self.batch_meta['feature_list'][1][..., cur_batch_indexes]
+        jt_candidate_feature = self.batch_meta['feature_list'][2][..., cur_candidate_indexes]
+        z = (gt_jt_rel - candidate_jt_rel).reshape((3, self.num_joints,cur_ndata), order='F')
+        score = dutils.calc_RBF_score(z, self.rbf_sigma, 3)
+        mpjpe = dutils.calc_mpjpe_from_residual(z, self.num_joints)
+        
+        alldata = [np.require(gt_jt_rel/self.max_depth, dtype=np.single, requirements='C'), \
+                   np.require(img_feature.reshape((-1,cur_ndata),order='F'), \
+                              dtype=np.single, requirements='C'), \
+                   np.require(jt_candidate_feature.reshape((-1,cur_ndata),order='F'), \
+                              dtype=np.single, requirements='C'), \
+                   np.require(score.reshape((-1,cur_ndata)), \
+                              dtype=np.single, requirements='C'),\
+                   np.require(mpjpe.reshape((-1,cur_ndata))/self.max_depth, \
+                              dtype=np.single, requirements='C')]
+        # import iutils as iu
+        # iu.print_common_statistics(alldata[0], 'gt')
+        # iu.print_common_statistics(alldata[1], 'imgfeature')
+        # iu.print_common_statistics(alldata[2], 'jtfeature')
+        # iu.print_common_statistics(alldata[3], 'mpjpe')
+        return epoch, batchnum, alldata
+    def get_data_dims(self, idx=0):
+        # print self.batch_meta['feature_dim'], 'feature dim======'
+        # print 'feature_dim %d' % idx, self.batch_meta['feature_dim'][idx]
+        if idx == 0:
+            return self.num_joints * 3
+        elif idx in [1,2]:
+            return self.batch_meta['feature_dim'][idx]
+        else:
+            return 1
+        
         

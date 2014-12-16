@@ -54,7 +54,10 @@ class TestConvNet(ConvNet):
         params = self.parse_params(self.mode_params)
         feature_name = params[0]
         save_folder = params[1]
-        
+        if len(params) == 3:
+            Y_idx = int(params[2])
+        else:
+            Y_idx = 1
         import scipy.io as sio
         testdp = self.test_data_provider
         num_batches = len(testdp.batch_range)
@@ -79,7 +82,7 @@ class TestConvNet(ConvNet):
             d = dict()
             d['X'] = buf.transpose()
             d['batch_num'] = b_num
-            d['Y'] = data[1]
+            d['Y'] = data[Y_idx]
             cur_batch_indexes = self.test_data_provider.data_dic['cur_batch_indexes']
             print d['Y'].shape
             d['cur_batch_indexes'] = cur_batch_indexes
@@ -191,6 +194,7 @@ class TestConvNet(ConvNet):
         test_outputs = []
         num_cases = []
         params = self.parse_params(self.op.get_value('mode_params'))
+        save_path = None
         # output_layer_idx = self.get_layer_idx(params[0])
         output_layer_name = params[0]
         if len(params) == 1:
@@ -209,14 +213,21 @@ class TestConvNet(ConvNet):
             is_relskel = False
         else:
             is_relskel = (self.test_data_provider.feature_name_3d in rel_list)
-        print 'I am using %s' % ('RelSkel' if is_relskel else 'Rel')
+        # print 'I am using %s' % ('RelSkel' if is_relskel else 'Rel')
         convert_dic = {'h36m_rel':lambda x:x,\
                        'h36m_body':self.convert_relskel2rel, \
                        'humaneva_body':self.convert_relskel2rel_eva,
                        'people_count':lambda X: X * self.test_data_provider.maximum_count, \
                        'h36m_pairwise_simple': lambda X: self.convert_pairwise2rel_simple(X)}
-        if is_relskel == False and target_type in ['h36m_body']:
-            raise Exception('target|dp does''t match')
+        # if is_relskel == False and target_type in ['h36m_body']:
+        #     raise Exception('target|dp does''t match')
+        try:
+            max_depth = self.test_data_provider.max_depth
+            num_joints = self.test_data_provider.num_joints
+        except AttributeError:
+            max_depth = 1200
+            num_joints = 17
+            print 'Assigning default max_depth'
         while True:
             data = next_data
             num_cases += [data[0].shape[-1]]
@@ -240,10 +251,10 @@ class TestConvNet(ConvNet):
                 gt = data[gt_idx]
             if target_type in ['h36m_rel', 'h36m_body', 'humaneva_body', \
                                'h36m_pairwise_simple']:
-                test_outputs += [self.calc_MPJPE(est, gt, self.test_data_provider.num_joints)]
-                err_list += self.calc_MPJPE_raw(est, gt, self.test_data_provider.num_joints)
+                test_outputs += [self.calc_MPJPE(est, gt, num_joints)]
+                err_list += self.calc_MPJPE_raw(est, gt, num_joints)
             elif target_type == 'h36m_body_len':
-                test_outputs += [self.calc_MPJPE(est, gt, self.test_data_provider.num_joints-1)]
+                test_outputs += [self.calc_MPJPE(est, gt, num_joints-1)]
             elif target_type == 'people_count':
                 test_outputs += [self.calc_absdiff_count(est,gt)]
                 err_list += (est - gt).flatten().tolist() 
@@ -260,7 +271,6 @@ class TestConvNet(ConvNet):
            a = a + x[0]
            b = b + x[1]
         if target_type in ['h36m_rel', 'h36m_body', 'humaneva_body', 'h36m_pairwise_simple']:
-            max_depth = self.test_data_provider.max_depth
             print 'max_depth = %6f' % max_depth
             print 'MPJPE is %.6f, a, b = %.6f, %.6f' % ((a/b) * max_depth, a,b)
             arr = np.asarray(err_list).flatten()*max_depth
@@ -270,18 +280,18 @@ class TestConvNet(ConvNet):
             err_arr = np.abs(np.asarray(err_list))
             print 'Average counting error is %.6f (std=%.6f)' % (np.mean(err_arr), \
                                                                  np.std(err_arr))
-        if self.save_path:
+        if save_path:
             saved = dict()
             if target_type in ['h36m_body', 'humaneva_body','h36m_rel', \
                                'h36m_pairwise_simple']:
-                saved['prediction'] = np.concatenate(tosave_pred, axis=-1) * self.test_data_provider.max_depth
+                saved['prediction'] = np.concatenate(tosave_pred, axis=-1) * max_depth
             else:
                 saved['prediction'] = np.concatenate(tosave_pred, axis=-1)
             saved['indexes'] = tosave_indexes
             if len(self.test_data_provider.images_path) != 0:
                 saved['images_path'] = [self.test_data_provider.images_path[x] for x in tosave_indexes]
             saved['oribbox'] = self.test_data_provider.batch_meta['oribbox'][...,tosave_indexes].reshape((4,-1),order='F')
-            sio.savemat(self.save_path, saved)
+            sio.savemat(save_path, saved)
     def do_score_prediction(self):
         """
         IN the current version, I will not take parameters from outside

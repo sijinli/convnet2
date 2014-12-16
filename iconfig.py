@@ -29,7 +29,7 @@ from python_util.options import *
 def register_data_provider(DataProvider):
     DataProvider.register_data_provider('croppeddhmlperelskeljt', 'CROPPEDDHMLPERELSKELJOINTDATAPROVIDER', CroppedDHMLPERelSkelJointDataProvider)
     DataProvider.register_data_provider('memfeat', 'MEMORYFEATUREDATAPROVIDER', MemoryFeatureDataProvider)
-
+    DataProvider.register_data_provider('spsimple', 'SPSIMPLEDATAPROVIDER', SPSimpleDataProvider)
 def add_options(op):
     op.add_option("shuffle-data", "shuffle_data", IntegerOptionParser, "whether to shullfe the data", default=0)
     op.add_option("batch-size", "batch_size", IntegerOptionParser, "Determine how many data can be loaded in a batch. Note: only valid for data providing loading images directly", default=-1) 
