@@ -141,6 +141,12 @@ class CroppedImageDataProvider(DataProvider):
             self.input_image_dim[1] -= dp_params['crop_one_border']
         else:
             self.input_image_dim = self.batch_meta['image_sample_dim']
+        if 'fix_num_batch' in dp_params:
+            # It can be used for forcing the number of batch to be fixed
+            # The last batch might be smaller than previous batch
+            self.fix_num_batch = dp_params['fix_num_batch']
+        else:
+            self.fix_num_batch = False 
         self.shuffle_data = dp_params['shuffle_data'] # determine whether to shuffle test data
         if 'external_meta_path' in dp_params and dp_params['external_meta_path']:
             import iread.myio as mio
@@ -211,7 +217,7 @@ class CroppedImageDataProvider(DataProvider):
         batch_num in self.image_range
         """
         dic = dict()
-        if self.test and self.shuffle_data == 0:
+        if (self.test and self.shuffle_data == 0) or self.fix_num_batch:
             # test data doesn't need to circle 
             end_num = min(batch_num + self.batch_size, self.num_image)
             cur_batch_indexes = self.shuffled_image_range[batch_num:end_num]
@@ -222,7 +228,7 @@ class CroppedImageDataProvider(DataProvider):
         ## Load image data
         imagepaths = []
         imagepaths = map(lambda x:self.images_path[x], cur_batch_indexes)
-        
+
         offset_r, offset_c, dic['data'] = load_cropped_images(imagepaths, self.image_dim, self.cropped_mean_image, self.input_image_dim, self.rgb_eigenvalue, self.rgb_eigenvector, 0.1, self.test)
         self.cur_offset_r = offset_r
         self.cur_offset_c = offset_c
@@ -239,7 +245,7 @@ class CroppedImageDataProvider(DataProvider):
         self.batch_idx = self.get_next_batch_idx()
         if self.batch_idx >= self.num_image:
             self.curr_epoch += 1
-            if not (self.test and (self.shuffle_data == 0)):
+            if not ((self.test and (self.shuffle_data == 0)) or self.fix_num_batch):
                 self.batch_idx -= self.num_image
             else:
                 self.batch_idx = 0
@@ -247,7 +253,7 @@ class CroppedImageDataProvider(DataProvider):
     def get_next_batch_idx(self):
         return self.batch_idx + self.batch_size
     def get_next_batch_num(self):
-        if self.test and (self.shuffle_data == 0):
+        if (self.test and (self.shuffle_data == 0) ) or self.fix_num_batch :
             if self.batch_idx + self.batch_size < self.num_image:
                 return self.batch_idx + self.batch_size
             else:

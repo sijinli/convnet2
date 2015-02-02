@@ -205,14 +205,58 @@ class CroppedDHMLPERelSkelJointLenDataProvider(CroppedDHMLPERelSkelJointDataProv
             return iprod(self.joint_indmap.mdim) * self.num_joints
         else:
             return self.num_joints - 1
+class SPRawDataProvider(MemoryFeatureDataProvider):
+    """
+    Requirement:
+    feature_list = [gt_jt_rel, img_feature, jt_feature]
 
+    alldata
+    gt_jt_rel/ max_depth,
+    img_feature
+    jt_feature,
+    margin ---------------- all zero vector
+    """
+    def __init__(self, data_dir, feature_range, init_epoch=1, init_batchnum=None, dp_params={}, test=False):
+        MemoryFeatureDataProvider.__init__(self, data_dir, feature_range, init_epoch, init_batchnum, dp_params, test)
+        self.max_depth = self.batch_meta['info']['max_depth']
+        self.num_joints = self.batch_meta['info']['num_joints']
+    def get_next_batch(self):
+        if self.data_dic is None or len(self.batch_range) > 1:
+            self.data_dic = self.get_batch(self.curr_batchnum)
+        epoch, batchnum = self.curr_epoch, self.curr_batchnum
+        self.advance_batch()
+        cur_ndata = len(self.data_dic['cur_batch_indexes'])
+        cur_batch_indexes = self.data_dic['cur_batch_indexes']
+        gt_jt_rel = self.batch_meta['feature_list'][0][..., cur_batch_indexes]/self.max_depth
+        img_feature = self.batch_meta['feature_list'][1][..., cur_batch_indexes]
+        jt_feature = self.batch_meta['feature_list'][2][..., cur_batch_indexes]
+        score = np.zeros((1, cur_ndata),dtype=np.single) # default C-continous 
+        alldata = [np.require(gt_jt_rel.reshape((-1, cur_ndata), order='F'),
+                              dtype=np.single, requirements='C'),
+                   np.require(img_feature.reshape((-1,cur_ndata),order='F'),
+                              dtype=np.single, requirements='C'),
+                   np.require(jt_feature.reshape((-1, cur_ndata),order='F'),
+                              dtype=np.single, requirements='C'),
+                   score
+        ]
+        return epoch, batchnum, alldata
+    def get_data_dims(self, idx=0):
+        if idx == 0:
+            return self.num_joints * 3
+        elif idx in [1,2]:
+            return self.batch_meta['feature_dim'][idx]
+        else:
+            return 1
+        
 class SPSimpleDataProvider(MemoryFeatureDataProvider):
     """
     This data provider will provide
     [ gt_rel data,
       img_features,
-      jt_features
-      score]   
+      features
+      score,
+      mpjpe
+    ]   
     """
     def __init__(self, data_dir, feature_range, init_epoch=1, init_batchnum=None, dp_params={}, test=False):
         MemoryFeatureDataProvider.__init__(self, data_dir, feature_range, init_epoch, init_batchnum, dp_params, test)

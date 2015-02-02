@@ -2050,6 +2050,8 @@ CostLayer& CostLayer::make(ConvNetThread* convNetThread, PyObject* paramsDict, s
         return *new LogregCostLayer(convNetThread, paramsDict, replicaID);
     } else if (type == "cost.sum2") {
         return *new SumOfSquaresCostLayer(convNetThread, paramsDict, replicaID);
+    } else if (type == "cost.maxmarginpair") {
+        return *new MaxMarginPairCostLayer(convNetThread, paramsDict, replicaID);
     }
     throw std::string("Unknown cost layer type ") + type;
 }
@@ -2297,5 +2299,32 @@ void SumOfSquaresCostLayer::fpropActs(int inpIdx, float scaleTargets, PASS_TYPE 
 
 void SumOfSquaresCostLayer::bpropActs(NVMatrix& v, int replicaIdx, int inpIdx, float scaleTargets, PASS_TYPE passType) {
     _prev[replicaIdx][inpIdx]->getActsGrad().add(*_inputs[0], scaleTargets, -2 * _coeff);
+}
+
+/*--------------------------Start of itsuper7 layers---------------------------*/
+
+/* 
+ * =====================
+ * MaxMarginPairCostLayer
+ * =====================
+ */
+MaxMarginPairCostLayer::MaxMarginPairCostLayer(ConvNetThread* convNetThread, PyObject* paramsDict, int replicaID) : CostLayer(convNetThread, paramsDict, replicaID, false) {
+}
+
+void MaxMarginPairCostLayer::fpropActs(int inpIdx, float scaleTargets, PASS_TYPE passType, int passIdx) {
+  assert(inpIdx == 0);
+  assert(_inputs[0]->getNumRows() == 1);
+  _tmp1.resize(*_inputs[0]);
+  computeMaxMarginPairCost(*_inputs[0], _tmp, _tmp1);
+  _costv.clear();
+  _costv.push_back(_tmp.sum());
+  _costv.push_back( _tmp1.sum()); 
+}
+
+void MaxMarginPairCostLayer::bpropActs(NVMatrix& v, int replicaIdx, int inpIdx, float scaleTargets, PASS_TYPE passType) {
+  assert(_tmp.getNumCols() == _inputs[0]->getNumCols());
+  assert(_tmp.getNumRows() == 1);
+  computeMaxMarginPairGrad(_tmp);
+  _prev[replicaIdx][inpIdx]->getActsGrad().add(_tmp, scaleTargets, -_coeff); 
 }
 

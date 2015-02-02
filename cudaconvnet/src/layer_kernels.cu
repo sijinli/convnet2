@@ -553,3 +553,58 @@ void computeLogregSoftmaxGrad(NVMatrix& labels, NVMatrix& probs, NVMatrix& targe
 
     getLastCudaError("computeLogregSoftmaxGrad: Kernel execution failed");
 }
+
+// itsuper7 layer kernel begin
+/*
+  a_i = -a_i if i % 2 == 0 else a_i
+*/
+__global__ void kReverseEvenElement(float* input, float*output, \
+                                    float * activated, int len) {
+  const int tx = 2 * (blockIdx.x * LOGREG_GRAD_THREADS_X + threadIdx.x);
+  if (tx < len) {
+    if (tx + 1 < len) {
+      if ((-input[tx] + input[tx + 1]) > 0) {
+        output[tx] = -input[tx];
+        output[tx + 1] = input[tx + 1];
+        activated[tx] = 1;
+        activated[tx + 1] = 1;
+      } else {
+        output[tx] = output[tx + 1] = 0;// Will not occur in the training phrase
+        activated[tx + 1] = 0;
+        activated[tx] = 0;
+      }
+    }
+  }
+}
+/*
+  return 1 if tx is odd otherwise -1
+  Also ensure that only penalize the violated one
+*/
+__global__ void kIsOdd(float*output, int len) {
+  const int tx = 2 * (blockIdx.x * LOGREG_GRAD_THREADS_X + threadIdx.x);
+  if (tx < len) {
+    if (tx + 1 < len) {
+      int flag = (output[tx] + output[tx + 1]) > 0;
+      output[tx] = -flag;
+      output[tx + 1] = flag;
+    } else {
+      output[tx] = 0;
+    }  
+  }
+}
+void computeMaxMarginPairCost(NVMatrix& pairinput, NVMatrix& result, NVMatrix& activated) {
+  result.resize(pairinput);
+  int numCases = pairinput.getNumCols();
+  dim3 threads(LOGREG_ERR_THREADS_X, 1);
+  dim3 blocks(DIVUP( DIVUP(numCases,2), LOGREG_ERR_THREADS_X), 1);
+  cudaStream_t stream = NVMatrix::getDefaultStream();
+  kReverseEvenElement<<<blocks, threads, 0, stream>>>(pairinput.getDevData(), result.getDevData(), activated.getDevData(), numCases);
+}
+
+void computeMaxMarginPairGrad(NVMatrix &result) {
+  int numCases = result.getNumCols();
+  dim3 threads(LOGREG_ERR_THREADS_X, 1);
+  dim3 blocks(DIVUP(DIVUP(numCases,2), LOGREG_ERR_THREADS_X), 1);
+  cudaStream_t stream = NVMatrix::getDefaultStream();
+  kIsOdd<<<blocks, threads, 0, stream>>>(result.getDevData(), numCases);
+}

@@ -84,5 +84,10 @@ void computeLogregSoftmaxGrad(NVMatrix& labels, NVMatrix& probs, NVMatrix& targe
 void computeEltwiseMaxGrad(NVMatrix& actGrad, NVMatrix& input, NVMatrix& output, NVMatrix& target, bool add);
 void computeMultiSoftmaxCost(NVMatrix& labels, NVMatrix& probs, NVMatrix& maxProbs, NVMatrix& labelLogProbs_out,
                              NVMatrix& correctProbs_out, NVMatrix& top5Probs_out, int setSize);
+
+// itsuper7 layer kernel begin
+void computeMaxMarginPairCost(NVMatrix& pairinput, NVMatrix& results, \
+                              NVMatrix& activated);
+void computeMaxMarginPairGrad(NVMatrix& tmp);
 #endif	/* LAYER_KERNELS_CUH */
 

@@ -1474,6 +1474,18 @@ class SumOfSquaresCostParser(CostParser):
         dic = CostParser.parse(self, name, mcp, prev_layers, model)
         print "Initialized sum-of-squares cost '%s' on GPUs %s" % (name, dic['gpus'])
         return dic
+
+# itsuper7 layer def begin
+class MaxMarginPairCostParser(CostParser):
+    def __init__(self):
+        CostParser.__init__(self, num_inputs=1)
+    def parse(self, name, mcp, prev_layers, model):
+        dic = CostParser.parse(self, name, mcp, prev_layers, model)
+        ## if the previous layers are fc--->eltsum--->this
+        ## Then enable global cost (including \|w\|^2
+        # dic['enable_global_cost'] = flag
+        print "Initialized MaxMarginPair cost '%s' on GPUs %s" % (name, dic['gpus'])
+        return dic
     
 # All the layer parsers
 layer_parsers = {'data' :           lambda : DataLayerParser(),
@@ -1507,7 +1519,8 @@ layer_parsers = {'data' :           lambda : DataLayerParser(),
                  'cost.crossent':   lambda : CrossEntCostParser(),
                  'cost.bce':        lambda : BinomialCrossEntCostParser(),
                  'cost.dce':        lambda : DetectionCrossEntCostParser(),
-                 'cost.sum2':       lambda : SumOfSquaresCostParser()}
+                 'cost.sum2':       lambda : SumOfSquaresCostParser(),
+                 'cost.maxmarginpair':lambda : MaxMarginPairCostParser()}
  
 # All the neuron parsers
 # This isn't a name --> parser mapping as the layer parsers above because neurons don't have fixed names.

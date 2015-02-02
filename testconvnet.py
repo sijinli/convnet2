@@ -102,7 +102,7 @@ class TestConvNet(ConvNet):
             cost_name = params[0][0]
             cost_idx = params[0][1]
         if cost_name not in self.train_outputs[0][0]:
-            raise TestConvNetError("Cost layer with name '%s' not defined by given convnet." % cost_name)
+            raise TestConvNetError("Cost layer with name {} not defined by given convnet.".format(cost_name))
         train_errors = [o[0][cost_name][cost_idx]/o[1] for o in self.train_outputs]
         test_errors = [o[0][cost_name][cost_idx]/o[1] for o in self.test_outputs]
         numbatches = len(self.train_batch_range)
@@ -157,7 +157,7 @@ class TestConvNet(ConvNet):
         for x in l:
             if x.find('@') != -1:
                 a = x.split('@')
-                res_l += [(a[0], int(a[1]))]
+                res_l += [[a[0], int(a[1])]]
             else:
                 res_l += [x]              
         return res_l

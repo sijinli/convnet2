@@ -807,5 +807,18 @@ public:
     SumOfSquaresCostLayer(ConvNetThread* convNetThread, PyObject* paramsDict, int replicaID);
 };
 
+/*-------------------------Start of itsuper7 layers----------------------------*/
+class MaxMarginPairCostLayer : public CostLayer {
+protected:
+    NVMatrix _tmp;
+    NVMatrix _tmp1;
+    void fpropActs(int inpIdx, float scaleTargets, PASS_TYPE passType, int passIdx);
+    void bpropActs(NVMatrix& v, int replicaIdx, int inpIdx, float scaleTargets, PASS_TYPE passType);
+public:
+    MaxMarginPairCostLayer(ConvNetThread* convNetThread, PyObject* paramsDict, int replicaID);
+};
+
+
+
 #endif    /* LAYER_CUH */
 
